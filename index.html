@@ -560,4 +560,47 @@
     addRow();
   </script>
 </body>
+<!-- ====== Author Card Footer ====== -->
+<footer style="
+  background: #f9fafb;
+  border-top: 2px solid #e5e7eb;
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  text-align: center;
+  color: #333;
+">
+  <div style="
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.08);
+    border-radius: 12px;
+    padding: 12px 18px;
+    transition: transform 0.3s ease;
+  "
+  onmouseover="this.style.transform='translateY(-4px)';"
+  onmouseout="this.style.transform='translateY(0)';"
+  >
+    <img src="https://masashi064-dev.vercel.app/baree-hiyoko.gif" 
+         alt="Masashi's photo"
+         style="width:60px; height:60px; border-radius:50%; border:2px solid #00bfa5; object-fit:cover;">
+    <div style="text-align:left;">
+      <div style="font-weight:600; font-size:16px;">Masashi（ぺとり）</div>
+      <div style="font-size:13px; color:#666;">趣味で役立つツールを作っています</div>
+      <a href="https://masashi064-dev.vercel.app/" 
+         target="_blank" rel="noopener noreferrer"
+         style="display:inline-block; margin-top:4px; font-size:13px; color:#00a387; text-decoration:none; font-weight:500;">
+         🔗 他の成果物も見てみる
+      </a>
+    </div>
+  </div>
+  <div style="font-size:13px; color:#888;">© 2025 Masashi — All Rights Reserved.</div>
+</footer>
+<!-- ====== /Author Card Footer ====== -->
 </html>
