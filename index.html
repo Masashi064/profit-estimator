@@ -42,13 +42,17 @@
     .controls { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
     .control { display:flex; gap:8px; align-items:center; }
     .control--unit { justify-self: start; }
-    #unitSel {
-      flex: 0 0 auto;          /* 親がflexでも伸びない */
-      width: 19ch;              /* 文字幅ベース。6〜8chで微調整 */
-      min-width: 13ch;
+    .control--unit label { font-size: 0.95rem; }
+    .subtext{
+      font-size: 1rem;        /* h1 < subtext < note の順にならない場合は 1.05〜1.1rem へ */
+      line-height: 1.6;
+      font-weight: 600;
+      margin: .25rem 0 .75rem;
+      color: #333;
     }
+    #unitSel {flex: 0 0 auto; width: 11ch;min-width: 10ch; padding-right: 0.5em; font-size: 0.95rem;}
     select#unitSel { width: 7ch !important; }
-    label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    label { font-size: 14px; color: var(--muted); white-space: nowrap; }
     select, input[type="number"], input[type="text"] {
       width: 100%; box-sizing: border-box; padding: 8px 10px; border:1px solid #dde; border-radius:10px;
       background:#fafafe; outline:none; transition: border-color .2s, background .2s;
@@ -113,7 +117,10 @@
         flex: 0 0 auto !important; /* 自動伸縮を禁止 */
       }
     }
-
+    /* 横向きで高さが低い端末でも非表示（スマホ横持ち対策） */
+    @media (orientation: landscape) and (max-height: 480px) {
+      .note { display: none; }
+    }
     /* さらに狭い端末（~480px）では文字数をもう少し確保 */
     @media (max-width: 480px){
       td > div[style*="display:flex"] input[type="number"],
