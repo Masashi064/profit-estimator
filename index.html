@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>評価損益率・利益・売却額 相互計算ツール</title>
+  <style>
+    /* 計算ボタンの見た目（緑・丸・影・ホバー・フォーカス） */
+    .calcBtn {
+      background: #10b981;          /* emerald-500 */
+      color: #fff;
+      font-weight: 700;
+      padding: 8px 16px;            /* 高さと横幅のバランス */
+      border: none;
+      border-radius: 9999px;        /* pill型 */
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0,0,0,.12);
+      transition: background .2s ease, transform .02s ease-in-out, box-shadow .2s ease;
+    }
+
+    .calcBtn:hover {
+      background: #059669;          /* emerald-600 */
+      box-shadow: 0 6px 16px rgba(0,0,0,.14);
+    }
+
+    .calcBtn:active {
+      transform: translateY(1px);
+      background: #047857;          /* emerald-700 */
+    }
+
+    .calcBtn:focus-visible {
+      outline: 2px solid #34d399;   /* emerald-400 */
+      outline-offset: 2px;
+    }
+
+    :root { --bg:#f7f7fb; --card:#fff; --text:#222; --muted:#666; --acc:#0a7; --err:#c00; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif; background:var(--bg); color:var(--text); margin:0; }
+    .wrap { max-width: 1080px; margin: 32px auto; padding: 0 16px; }
+    .card { background:var(--card); border-radius:14px; box-shadow:0 6px 24px rgba(0,0,0,.08); padding:20px; }
+    h1 { font-size: 20px; margin: 0 0 12px; }
+    p.note { color: var(--muted); font-size: 13px; margin: 8px 0 16px; }
+    .controls { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
+    .control { display:flex; gap:6px; align-items:center; }
+    label { font-size: 13px; color: var(--muted); white-space: nowrap; }
+    select, input[type="number"], input[type="text"] {
+      width: 100%; box-sizing: border-box; padding: 8px 10px; border:1px solid #dde; border-radius:10px;
+      background:#fafafe; outline:none; transition: border-color .2s, background .2s;
+    }
+    select:focus, input:focus { border-color: var(--acc); background:#fff; }
+    .buttons{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end; /* ボタン並びの右寄せ */
+      justify-self: end;         /* グリッドセル自体を右端に配置 */
+    }
+    button {
+      border: 0; border-radius: 10px; padding: 10px 14px; cursor: pointer; background: var(--acc); color: #fff; font-weight: 600;
+      box-shadow: 0 4px 14px rgba(0,0,0,.1); transition: transform .02s ease-in-out, opacity .2s;
+    }
+    button:hover { opacity: .95; }
+    button:active { transform: translateY(1px); }
+    .btn-link { background: transparent; color: #06a; box-shadow: none; padding: 6px 10px; }
+    .row-actions { white-space: nowrap; }
+    table { width:100%; border-collapse: collapse; margin-top: 14px; }
+    th, td { padding: 10px 8px; text-align: left; }
+    thead th { font-size: 13px; color: var(--muted); border-bottom: 1px solid #e6e6ee; }
+    tbody tr { border-bottom: 1px dashed #ececf3; }
+    .unit { color: var(--muted); font-size: 12px; }
+    .error { color: var(--err); font-size: 12px; margin-top: 4px; }
+    .totals { display:flex; gap:12px; align-items:center; flex-wrap: wrap; margin-top: 10px;}
+    .pill { background:#eefaf5; color:#086; padding:8px 12px; border-radius:999px; font-weight:700; font-size: 14px; }
+    tfoot td { font-weight:700; }
+    @media (max-width:820px){
+      .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px){
+      .controls{ grid-template-columns: 1fr; }  /* 1カラム */
+      .buttons{ justify-self: end; }            /* 右端に配置 */
+    }
+    /* 操作セル（計算・削除・エラー）全体のレイアウト */
+    .row-actions {
+      display: flex;               /* 横並び配置 */
+      align-items: center;
+      gap: 8px;                    /* ボタン間の余白 */
+      flex-wrap: wrap;             /* 下の行（エラー）を改行して表示できるように */
+      position: relative;          /* エラーの位置指定に備える */
+    }
+
+    /* エラーメッセージのスタイル */
+    .row-actions .error {
+      flex-basis: 100%;            /* 改行（幅100%で次の行に配置） */
+      text-align: right;           /* 右寄せ（削除ボタンの下） */
+      color: #e11d48;              /* 赤色（Tailwindのrose-600に近い） */
+      font-size: 12px;             /* 小さめフォント */
+      margin-top: 4px;             /* 上に少し余白 */
+    }
+
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>評価損益率・利益・売却額 相互計算ツール</h1>
+      <p class="note">
+        評価損益率・利益・売却額の3つのうち2つを入力すると残り1つを自動計算します。<br>
+        ・評価損益率は<strong>百分率（%）</strong>で入力（例：184、-35.2）<br>
+        ・利益・売却額は金額を入力します（単位は「円 / 万円」を固定表示で切り替え可）。<br>
+        ・負の値（損失）にも対応しているため、損出しの計算にも使えます。<br>
+      </p>
+
+      <div class="controls">
+        <div class="control">
+          <label for="unitSel">通貨単位</label>
+          <select id="unitSel">
+            <option value="MAN">万円</option>
+            <option value="JPY">円</option>
+          </select>
+        </div>
+        <div class="buttons">
+          <button id="addRowBtn" type="button">＋ 行を追加</button>
+          <button id="exportCsvBtn" type="button">CSVエクスポート</button>
+          <button id="clearBtn" type="button" class="btn-link">リセット</button>
+        </div>
+      </div>
+
+      <div class="totals">
+        <span class="pill" id="sumProfit">利益 合計: 0</span>
+        <span class="pill" id="sumProceeds">売却額 合計: 0</span>
+        <span class="pill" id="currentUnit">単位: 円（¥）</span>
+      </div>
+
+      <div style="overflow-x:auto;">
+        <table id="calcTable" aria-label="計算テーブル">
+          <thead>
+            <tr>
+              <th style="width:22%">評価損益率 <span class="unit">（%）</span></th>
+              <th style="width:22%">利益 <span class="unit" id="profitUnitHead">（円）</span></th>
+              <th style="width:22%">売却額 <span class="unit" id="proceedsUnitHead">（円）</span></th>
+              <th style="width:20%">メモ</th>
+              <th style="width:14%">操作</th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot>
+            <tr>
+              <td></td>
+              <td id="sumProfitCell"></td>
+              <td id="sumProceedsCell"></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <p class="note" style="margin-top:10px;">
+        数式（rは百分率）：<br>
+        ・<code>売却額 = 利益 × (1 + 100 / r)</code><br>
+        ・<code>利益 = 売却額 / (1 + 100 / r)</code><br>
+        ・<code>評価損益率(%) = 100 × 利益 / (売却額 − 利益)</code>
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // ====== ユーティリティ ======
+    const tbody = document.getElementById('tbody');
+    const addRowBtn = document.getElementById('addRowBtn');
+    const exportCsvBtn = document.getElementById('exportCsvBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const unitSel = document.getElementById('unitSel');
+    //const precisionSel = document.getElementById('precisionSel');
+    //const roundModeSel = document.getElementById('roundModeSel');
+    const sumProfitEl = document.getElementById('sumProfit');
+    const sumProceedsEl = document.getElementById('sumProceeds');
+    const sumProfitCell = document.getElementById('sumProfitCell');
+    const sumProceedsCell = document.getElementById('sumProceedsCell');
+    const currentUnitEl = document.getElementById('currentUnit');
+    const profitUnitHead = document.getElementById('profitUnitHead');
+    const proceedsUnitHead = document.getElementById('proceedsUnitHead');
+
+    function getUnitInfo(){
+      const u = unitSel.value;
+      if (u === 'MAN') return { label: '万円', short: '万円', symbol: '', factor: 1 }; // 表示をそのまま「万円」として扱う
+      return { label: '円（¥）', short: '円', symbol: '¥', factor: 1 }; // 表示は「円」
+    }
+    // ※今回の式は単位が同じなら機能するので、内部変換は不要。
+    //   単位変更時は数値をスケーリングする（円↔万円）ために factor を動的に使う。
+    function getScale(oldUnit, newUnit){
+      if (oldUnit === newUnit) return 1;
+      if (oldUnit === 'MAN' && newUnit === 'JPY') return 10000;    // 万円 → 円
+      if (oldUnit === 'JPY' && newUnit === 'MAN') return 1/10000;  // 円 → 万円
+      return 1;
+    }
+
+    // 追加：単位に応じた桁数
+    function digitsForUnit(){
+      return unitSel.value === 'MAN' ? 2 : 0; // 万円→2桁、円→0桁
+    }
+
+    // 置換：四捨五入（単位の桁数を自動適用）
+    function roundByMode(value, digits = digitsForUnit()){
+      const m = Math.pow(10, digits);
+      return Math.round((Number(value) + Number.EPSILON) * m) / m;
+    }
+
+    // 置換：表示用フォーマッタ（単位で桁数を自動決定）
+    function fmt(x) {
+      if (!isFinite(x)) return '';
+      const d = digitsForUnit();
+      const scale = unitSel.value === 'MAN' ? 10000 : 1;
+      const val = x / scale; // 常に内部値は円単位で保持
+      const rounded = Math.round(val * Math.pow(10, d)) / Math.pow(10, d);
+      return rounded.toLocaleString('ja-JP', {
+        minimumFractionDigits: d,
+        maximumFractionDigits: d
+      });
+    }
+
+
+    function parseOrNull(v){
+      if (v === '' || v === null || v === undefined) return null;
+      const n = Number(v);
+      return isFinite(n) ? n : null;
+    }
+
+    // ====== 行操作 ======
+    function addRow(defaults = {}) {
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <input type="number" step="0.01" class="r" placeholder="例: 184 / -35.2" value="${defaults.r ?? ''}">
+          <div class="error r-err" aria-live="polite"></div>
+        </td>
+        <td>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <input type="number" step="0.01" class="g" placeholder="利益（損はマイナス）" value="${defaults.g ?? ''}">
+            <span class="unit money-unit"></span>
+          </div>
+          <div class="error g-err" aria-live="polite"></div>
+        </td>
+        <td>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <input type="number" step="0.01" class="s" placeholder="売却額" value="${defaults.s ?? ''}">
+            <span class="unit money-unit"></span>
+          </div>
+          <div class="error s-err" aria-live="polite"></div>
+        </td>
+        <td>
+          <input type="text" class="note" placeholder="任意メモ" value="${defaults.note ?? ''}">
+        </td>
+        <td class="row-actions">
+          <button type="button" class="calcBtn">計算</button>
+          <button type="button" class="btn-link delBtn">削除</button>
+          <div class="error"></div>
+        </td>
+      `;
+      tbody.appendChild(tr);
+
+      const rEl = tr.querySelector('.r');
+      const gEl = tr.querySelector('.g');
+      const sEl = tr.querySelector('.s');
+      const calcBtn = tr.querySelector('.calcBtn');
+      const delBtn  = tr.querySelector('.delBtn');
+      const errorEl = tr.querySelector('.row-actions .error');
+
+      // 入力イベントでは計算しない（手動モード）
+
+      // 「計算」ボタンでのみ計算を実行
+      calcBtn.addEventListener('click', () => {
+        errorEl.textContent = '';
+
+        // 単位→円 / 円→単位
+        const toYen   = unitSel.value === 'MAN' ? 10000 : 1;
+        const fromYen = unitSel.value === 'MAN' ? 1/10000 : 1;
+        const digits  = unitSel.value === 'MAN' ? 2 : 0;
+
+        const r = parseOrNull(rEl.value);                 // %
+        const g = parseOrNull(gEl.value);                 // 表示単位
+        const s = parseOrNull(sEl.value);                 // 表示単位
+
+        const gY = g !== null ? g * toYen : null;         // 円に変換
+        const sY = s !== null ? s * toYen : null;         // 円に変換
+
+        try {
+          if (r !== null && gY !== null && sY === null) {
+            if (r === 0) throw new Error('評価損益率が0%では計算不可');
+            const sY_calc = gY * (1 + 100 / r);           // 円で計算（正解）
+            const sY_store = Math.round(sY_calc);         // 円の整数に丸め（正とする）
+            sEl.dataset.yen = String(sY_store);           // ★ 正解の円を保存
+            sEl.value = (sY_store * fromYen).toFixed(digits);
+
+          } else if (r !== null && sY !== null && gY === null) {
+            if (r === 0) throw new Error('評価損益率が0%では計算不可');
+            const gY_calc = sY / (1 + 100 / r);
+            const gY_store = Math.round(gY_calc);
+            gEl.dataset.yen = String(gY_store);           // ★ 正解の円を保存
+            gEl.value = (gY_store * fromYen).toFixed(digits);
+
+          } else if (gY !== null && sY !== null && r === null) {
+            const denom = sY - gY;                        // 円ベースで率を算出
+            if (denom === 0) throw new Error('売却額＝利益では計算不可');
+            rEl.value = ((100 * gY) / denom).toFixed(3);
+
+          } else {
+            errorEl.textContent = '2つだけ入力してください。';
+          }
+        } catch (e) {
+          errorEl.textContent = e.message;
+        }
+
+        updateTotals();
+      });
+
+
+
+
+      // 削除ボタン
+      delBtn.addEventListener('click', () => {
+        tr.remove();
+        updateTotals();
+      });
+
+      // 単位ラベル更新
+      updateMoneyUnitLabels();
+
+      // 初回計算は行わない（手動計算モード）
+      // computeRow(tr);
+    }
+
+
+    function parseOrNull(v){
+      if (v === '' || v === null || v === undefined) return null;
+      const n = Number(v);
+      return isFinite(n) ? n : null;
+    }
+
+
+
+    function updateMoneyUnitLabels(){
+      const info = getUnitInfo();
+      document.querySelectorAll('.money-unit').forEach(el => el.textContent = `（${info.short}）`);
+      profitUnitHead.textContent = `（${info.short}）`;
+      proceedsUnitHead.textContent = `（${info.short}）`;
+      currentUnitEl.textContent = `単位: ${info.label}`;
+    }
+
+    function showError(tr, key, msg){
+      const el = tr.querySelector(`.${key}-err`);
+      if (el) el.textContent = msg || '';
+    }
+    function clearErrors(tr){
+      ['r','g','s'].forEach(k => showError(tr, k, ''));
+    }
+
+    function computeRow(tr, explicit=false){
+      clearErrors(tr);
+      const rEl = tr.querySelector('.r');
+      const gEl = tr.querySelector('.g');
+      const sEl = tr.querySelector('.s');
+
+      const r = parseOrNull(rEl.value);  // %
+      const g = parseOrNull(gEl.value);  // 現在の単位
+      const s = parseOrNull(sEl.value);  // 現在の単位
+
+      const filled = [r,g,s].map(v => v!==null).filter(Boolean).length;
+      if (filled < 2) { updateTotals(); return; }
+      if (filled === 3 && !explicit) { updateTotals(); return; }
+
+      try {
+        if (r !== null && g !== null && (s === null || explicit)){
+          // S = G * (1 + 100/r)
+          if (r === 0){
+            showError(tr, 'r', '評価損益率が0%のとき売却額は算出できません');
+          } else {
+            const Sraw = g * (1 + 100 / r);
+            const Sout = roundByMode(Sraw, Number(precisionSel.value), roundModeSel.value);
+            sEl.value = Number.isFinite(Sout) ? Sout : '';
+          }
+        } else if (r !== null && s !== null && (g === null || explicit)){
+          // G = S / (1 + 100/r)
+          if (r === 0){
+            showError(tr, 'r', '評価損益率が0%のとき利益は算出できません');
+          } else {
+            const Graw = s / (1 + 100 / r);
+            const Gout = roundByMode(Graw, Number(precisionSel.value), roundModeSel.value);
+            gEl.value = Number.isFinite(Gout) ? Gout : '';
+          }
+        } else if (g !== null && s !== null && (r === null || explicit)){
+          // r% = 100 * G / (S - G)
+          const denom = (s - g);
+          if (denom === 0){
+            showError(tr, 's', '売却額＝利益のとき評価損益率は算出できません');
+          } else {
+            const R = 100 * g / denom;
+            rEl.value = Number.isFinite(R) ? (Math.round(R*1000)/1000) : '';
+          }
+        }
+      } catch(e){
+        console.error(e);
+      }
+
+      updateTotals();
+    }
+
+    function updateTotals(){
+      let sumGyen = 0, sumSyen = 0;
+
+      tbody.querySelectorAll('tr').forEach(tr => {
+        const gEl = tr.querySelector('.g');
+        const sEl = tr.querySelector('.s');
+
+        // 利益
+        let gY = null;
+        if (gEl.dataset && gEl.dataset.yen) {
+          gY = Number(gEl.dataset.yen);
+        } else {
+          const g = parseOrNull(gEl.value);
+          if (g !== null) gY = g * (unitSel.value === 'MAN' ? 10000 : 1);
+        }
+        if (gY !== null && isFinite(gY)) sumGyen += gY;
+
+        // 売却額
+        let sY = null;
+        if (sEl.dataset && sEl.dataset.yen) {
+          sY = Number(sEl.dataset.yen);
+        } else {
+          const s = parseOrNull(sEl.value);
+          if (s !== null) sY = s * (unitSel.value === 'MAN' ? 10000 : 1);
+        }
+        if (sY !== null && isFinite(sY)) sumSyen += sY;
+      });
+
+      // fmt(円) に任せて現在の単位で表示
+      sumProfitEl.textContent     = `利益 合計: ${fmt(sumGyen)}`;
+      sumProceedsEl.textContent   = `売却額 合計: ${fmt(sumSyen)}`;
+      sumProfitCell.textContent   = fmt(sumGyen);
+      sumProceedsCell.textContent = fmt(sumSyen);
+    }
+
+
+    // ====== 単位変更（円 ↔ 万円）時のスケーリング ======
+    let lastUnit = unitSel.value; // 初期
+      unitSel.addEventListener('change', () => {
+        const newUnit = unitSel.value;
+        const digits  = newUnit === 'MAN' ? 2 : 0;
+        const fromYen = newUnit === 'MAN' ? 1/10000 : 1;
+
+        tbody.querySelectorAll('tr').forEach(tr => {
+          ['g','s'].forEach(cls => {
+            const el = tr.querySelector('.' + cls);
+            let yen = null;
+
+            // 1) 計算済みなら dataset.yen（正解の円）を優先
+            if (el.dataset && el.dataset.yen) {
+              yen = Number(el.dataset.yen);
+            } else {
+              // 2) まだ未計算（手入力のみ）の場合は旧単位から円に直す
+              const v = parseOrNull(el.value);
+              if (v !== null) {
+                yen = v * (lastUnit === 'MAN' ? 10000 : 1);
+              }
+            }
+
+            if (yen !== null && isFinite(yen)) {
+              el.value = (yen * fromYen).toFixed(digits); // 正解の円 → 新しい単位で表示
+            }
+          });
+        });
+
+        updateMoneyUnitLabels();
+        updateTotals();
+        lastUnit = newUnit;
+      });
+
+
+
+
+    // ====== CSV エクスポート ======
+    function exportCSV(){
+      const info = getUnitInfo();
+      const rows = [];
+      // ヘッダ
+      rows.push(['評価損益率(%)','利益('+info.short+')','売却額('+info.short+')','メモ']);
+
+      tbody.querySelectorAll('tr').forEach(tr => {
+        const r = tr.querySelector('.r').value ?? '';
+        const g = tr.querySelector('.g').value ?? '';
+        const s = tr.querySelector('.s').value ?? '';
+        const note = tr.querySelector('.note').value ?? '';
+        rows.push([r, g, s, note]);
+      });
+
+      // フッター（合計）
+      const sumGtxt = sumProfitCell.textContent;
+      const sumStxt = sumProceedsCell.textContent;
+      rows.push([]);
+      rows.push(['合計', sumGtxt, sumStxt, '（単位：'+info.short+'）']);
+
+      // CSV 文字列化（Excelで文字化けしないようにBOM付与）
+      const csv = rows.map(r =>
+        r.map(cell => {
+          const v = String(cell ?? '');
+          // カンマ/改行/ダブルクォートを含む場合はクォート
+          if (/[",\n]/.test(v)) return `"${v.replace(/"/g, '""')}"`;
+          return v;
+        }).join(',')
+      ).join('\r\n');
+
+      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+      const ts = new Date().toISOString().replace(/[:T]/g,'-').slice(0,19);
+      const filename = `calc_export_${ts}.csv`;
+
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    exportCsvBtn.addEventListener('click', exportCSV);
+    addRowBtn.addEventListener('click', () => addRow());
+    clearBtn.addEventListener('click', () => { tbody.innerHTML=''; updateTotals(); addRow(); });
+
+    // 初期行
+    addRow();
+  </script>
+</body>
+</html>
