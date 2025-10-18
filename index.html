@@ -40,7 +40,14 @@
     h1 { font-size: 20px; margin: 0 0 12px; }
     p.note { color: var(--muted); font-size: 13px; margin: 8px 0 16px; }
     .controls { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; }
-    .control { display:flex; gap:6px; align-items:center; }
+    .control { display:flex; gap:8px; align-items:center; }
+    .control--unit { justify-self: start; }
+    #unitSel {
+      flex: 0 0 auto;          /* 親がflexでも伸びない */
+      width: 19ch;              /* 文字幅ベース。6〜8chで微調整 */
+      min-width: 13ch;
+    }
+    select#unitSel { width: 7ch !important; }
     label { font-size: 13px; color: var(--muted); white-space: nowrap; }
     select, input[type="number"], input[type="text"] {
       width: 100%; box-sizing: border-box; padding: 8px 10px; border:1px solid #dde; border-radius:10px;
@@ -131,15 +138,15 @@
   <div class="wrap">
     <div class="card">
       <h1>評価損益率・利益・売却額 相互計算ツール</h1>
+      <p class="subtext">評価損益率・利益・売却額の3つのうち2つを入力すると残り1つを自動計算します。</p>
       <p class="note">
-        評価損益率・利益・売却額の3つのうち2つを入力すると残り1つを自動計算します。<br>
         ・評価損益率は<strong>百分率（%）</strong>で入力（例：184、-35.2）<br>
         ・利益・売却額は金額を入力します（単位は「円 / 万円」を固定表示で切り替え可）。<br>
         ・負の値（損失）にも対応しているため、損出しの計算にも使えます。<br>
       </p>
 
       <div class="controls">
-        <div class="control">
+        <div class="control control--unit">
           <label for="unitSel">通貨単位</label>
           <select id="unitSel">
             <option value="MAN">万円</option>
@@ -587,11 +594,8 @@
   onmouseover="this.style.transform='translateY(-4px)';"
   onmouseout="this.style.transform='translateY(0)';"
   >
-    <img src="https://masashi064-dev.vercel.app/baree-hiyoko.gif" 
-         alt="Masashi's photo"
-         style="width:60px; height:60px; border-radius:50%; border:2px solid #00bfa5; object-fit:cover;">
     <div style="text-align:left;">
-      <div style="font-weight:600; font-size:16px;">Masashi（ぺとり）</div>
+      <div style="font-weight:600; font-size:16px;">作った人：Masashi（ぺとり）</div>
       <div style="font-size:13px; color:#666;">趣味で役立つツールを作っています</div>
       <a href="https://masashi064-dev.vercel.app/" 
          target="_blank" rel="noopener noreferrer"
