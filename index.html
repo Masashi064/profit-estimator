@@ -74,18 +74,43 @@
     @media (max-width:820px){
       .controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-    @media (max-width: 640px){
-      .controls{ grid-template-columns: 1fr; }  /* 1カラム */
-      .buttons{ justify-self: end; }            /* 右端に配置 */
+    /* モバイル最適化（目安: 768px以下） */
+    @media (max-width: 768px){
+      /* 列幅の固定(例: 22%)を無効化して、各セルに任せる */
+      table thead th, table tbody td { width: auto !important; }
+
+      /* 利益/売却額セル内は flex なので、input を伸ばす */
+      td > div[style*="display:flex"] {
+        gap: 6px !important; /* 余白を少し詰める */
+      }
+      td > div[style*="display:flex"] input[type="number"],
+      td > div[style*="display:flex"] input[type="text"] {
+        flex: 1 1 auto;
+        min-width: 10ch;       /* 10文字ぶん確保（必要に応じて12-14chへ） */
+        font-size: 16px;       /* iOSの自動ズーム回避 & 視認性UP */
+        text-align: right;     /* 数字は右寄せで見切れにくく */
+      }
+
+      /* （万円）などの単位ラベルは非表示にして幅確保 */
+      .money-unit { display: none !important; }
+
+      /* 行内のエラーメッセージは折返してもレイアウトが崩れないように */
+      .row-actions { flex-wrap: wrap; }
+      .row-actions .error {
+        flex-basis: 100%;
+        text-align: right;
+        margin-top: 4px;
+      }
     }
-    /* 操作セル（計算・削除・エラー）全体のレイアウト */
-    .row-actions {
-      display: flex;               /* 横並び配置 */
-      align-items: center;
-      gap: 8px;                    /* ボタン間の余白 */
-      flex-wrap: wrap;             /* 下の行（エラー）を改行して表示できるように */
-      position: relative;          /* エラーの位置指定に備える */
+
+    /* さらに狭い端末（~480px）では文字数をもう少し確保 */
+    @media (max-width: 480px){
+      td > div[style*="display:flex"] input[type="number"],
+      td > div[style*="display:flex"] input[type="text"] {
+        min-width: 12ch;
+      }
     }
+
 
     /* エラーメッセージのスタイル */
     .row-actions .error {
